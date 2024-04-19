@@ -6,7 +6,14 @@
       <h2>工具栏</h2>
       <p>这里是工具栏</p>
       <div v-for="item in toolList">
-        <el-button type="primary" :key="item.id">{{ item.name }}</el-button>
+        <div :class="{
+          'rect-tool-icon': item.id === 'rect',
+          'circle-tool-icon': item.id === 'circle',
+          'line-tool-icon': item.id === 'line',
+          'label-tool-icon': item.id === 'label',
+          'custom-tool-icon': item.id === 'custom',
+          }" :title="item.name">
+        </div>
       </div>
     </div>
   </div>
@@ -16,10 +23,11 @@
 import { onMounted } from 'vue';
 
 const toolList = [
-  { name: '矩形', id: 1 },
-  { name: '圆形', id: 2 },
-  { name: '线段', id: 3 },
-  { name: '自定义', id: 4 },
+  { name: '矩形', id: 'rect' },
+  { name: '圆形', id: 'circle' },
+  { name: '线段', id: 'line' },
+  { name: '标签', id: 'label'},
+  { name: '自定义', id: 'custom' },
 ]
 
 // 通过Konva库创建一个画布，并在画布中添加一张图片，作为背景
@@ -75,5 +83,16 @@ onMounted(() => {
 .tool-area {
   width: 500px;
   background-color: rgb(207, 227, 245);
+}
+.rect-tool-icon {
+  width: 30px;
+  height: 30px;
+  border: 1px solid black;
+}
+.circle-tool-icon {
+  width: 30px;
+  height: 30px;
+  border: 1px solid black;
+  border-radius: 50%;
 }
 </style>
