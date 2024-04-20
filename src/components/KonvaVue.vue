@@ -26,7 +26,8 @@
         </div>
         <div class="shape-list">
           <div class="shape-item" v-for="(item,index) in shapeList" :key="item.id">
-            {{ item.type }}-{{ index + 1 }}
+            <span class="shape-name">{{ item.type }}-{{ index + 1 }}</span>
+            <span class="shape-position">坐标：{{ `(${item.startX}, ${item.startY})`}}</span>
           </div>
         </div>
       </div>
@@ -54,6 +55,7 @@ let mousedownCount = ref(0);
 let currentTool = ref('');
 // 图形列表
 const shapeList = ref([]);
+let isClickInShape = ref(false);
 
 const toolList = [
   { name: '矩形', id: 'rect' },
@@ -134,7 +136,27 @@ const renderRect = (startX, startY, endX, endY, id) => {
     strokeWidth: 2,
   });
   rect.on('mousedown', function() {
+    isClickInShape.value = true;
     console.log('点击了矩形');
+    // 添加konva的transform属性，可以对图形进行缩放、旋转、平移等操作
+    rect.setAttrs({
+      draggable: true,
+      rotation: 0,
+      scaleX: 1,
+      scaleY: 1,
+    });
+  });
+  rect.on('mouseup', function() {
+    isClickInShape.value = false;
+  });
+  // 如果进行拖拽了，需要将拖拽后的坐标保存到数据库
+  rect.on('dragend', function() {
+    let { x, y } = rect.attrs;
+    let shape = shapeList.value.find(item => item.id === `rect-${id}`);
+    shape.startX = x;
+    shape.startY = y;
+    shape.endX = x + rect.width();
+    shape.endY = y + rect.height();
   });
   state.layer.add(rect);
   console.log('id', id);
@@ -148,6 +170,10 @@ const drawRect = () => {
 
   // 获取鼠标第一次在图片上按下的坐标
   state.container.addEventListener('mousedown', (e) => {
+    // 如果点击的是已经绘制的图形，则不再绘制新的图形
+    if (isClickInShape.value) {
+      return;
+    }
     // 判断鼠标按下的坐标是否在图片上
     if (isInImage(e.clientX, e.clientY)) {
       startX = e.clientX;
@@ -162,6 +188,10 @@ const drawRect = () => {
   // 获取鼠标移动的坐标
   let randomId = '';
   state.container.addEventListener('mousemove', (e) => {
+    // 如果点击的是已经绘制的图形，则不再绘制新的图形
+    if (isClickInShape.value) {
+      return;
+    }
     if (!isInImage(e.clientX, e.clientY)) {
       return;
     } 
@@ -187,6 +217,10 @@ const drawRect = () => {
 
   // 获取鼠标抬起的坐标
   state.container.addEventListener('mouseup', (e) => {
+    // 如果点击的是已经绘制的图形，则不再绘制新的图形
+    if (isClickInShape.value) {
+      return;
+    }
     if (isInImage(e.clientX, e.clientY)) {
       endX = e.clientX;
       endY = e.clientY;
