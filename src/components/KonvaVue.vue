@@ -1,7 +1,6 @@
 <template>
   <div class="wrapper">
-    <div ref="containerRef" class="container" id="containerId">
-    </div>
+    <div ref="containerRef" class="container-area" id="containerId"></div>
     <div class="tool-area">
       <h2>工具栏</h2>
       <p>这里是工具栏</p>
@@ -11,12 +10,15 @@
           :key="index"
           :title="item.name"
           class="tool-icon"
+          @click="handleToolClick(item.id)"
           :class="{
             'rect-tool-icon': item.id === 'rect',
             'circle-tool-icon': item.id === 'circle',
             'line-tool-icon': item.id === 'line',
             'label-tool-icon': item.id === 'label',
             'custom-tool-icon': item.id === 'custom',
+            'is-active': currentTool === item.id,
+            'is-active-line': currentTool === 'line',
           }"
         >
         </div>
@@ -26,7 +28,22 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { ElMessage } from 'element-plus';
+import { onMounted, reactive, ref } from 'vue';
+
+const state = reactive ({
+  container: null,
+  stage: null,
+  layer: null,
+  // 图片x渲染出来的宽高
+  imageWidth: 0,
+  imageHeight: 0,
+})
+
+// 是否正在画图
+const isDrawing = ref(false);
+let mousedownCount = ref(0);
+let currentTool = ref('');
 
 const toolList = [
   { name: '矩形', id: 'rect' },
@@ -36,51 +53,169 @@ const toolList = [
   { name: '自定义', id: 'custom' },
 ]
 
-// 通过Konva库创建一个画布，并在画布中添加一张图片，作为背景
 const initImage = () => {
-  const container = document.getElementById('containerId');
-  const stage = new Konva.Stage({
-    container: container,
-    width: container.clientWidth,
-    height: container.clientHeight,
-  });
-
-  const layer = new Konva.Layer();
-  stage.add(layer);
-
-  // 将图片alarm.png添加到画布中作为背景
+  // 将图片添加到画布中作为背景，图片在保持宽高比的情况下，填充整个画布
   let imageObj = new Image();
   imageObj.src = './alarm.png';
+  let imageWidth = state.container.clientWidth;
+  let imageHeight = state.container.clientHeight;
+  let imageRatio = imageObj.width / imageObj.height;
+  if (imageWidth / imageHeight > imageRatio) {
+    imageWidth = imageHeight * imageRatio;
+  } else {
+    imageHeight = imageWidth / imageRatio;
+  }
   imageObj.onload = function () {
     const image = new Konva.Image({
       image: imageObj,
       x: 0,
       y: 0,
-      // width应该是图片本身的宽度
-      width: imageObj.width,
-      height: imageObj.height,
+      width: imageWidth,
+      height: imageHeight,
     });
-    layer.add(image);
+    state.layer.add(image);
   };
+  state.imageWidth = imageWidth;
+  state.imageHeight = imageHeight;
+
+  // stage初始化之后，不需要随着窗口的变化而变化
+  window.addEventListener('resize', () => {
+    state.stage.width(state.container.clientWidth);
+    state.stage.height(state.container.clientHeight);
+  });
+}
+
+const handleToolClick = (toolId) => {
+  currentTool.value = toolId;
+  switch (toolId) {
+    case 'rect':
+      drawRect();
+      break;
+    case 'circle':
+      drawCircle();
+      break;
+    case 'line':
+      drawLine();
+      break;
+    case 'label':
+      drawLabel();
+      break;
+    case 'custom':
+      drawCustom();
+      break;
+    default:
+      break;
+  }
+}
+
+const isInImage = (x, y) => {
+  return x > 0 && x < state.imageWidth && y > 0 && y < state.imageHeight;
+}
+
+const renderRect = (startX, startY, endX, endY, id) => {
+  const rect = new Konva.Rect({
+    id: `react-${id}`,
+    x: startX,
+    y: startY,
+    width: endX - startX,
+    height: endY - startY,
+    fill: '#67a56359',
+    stroke: 'black',
+    strokeWidth: 2
+  });
+  state.layer.add(rect);
+  console.log('id', id);
+}
+
+const drawRect = () => {
+  let startX = 0;
+  let startY = 0;
+  let endX = 0;
+  let endY = 0;
+
+  // 获取鼠标第一次在图片上按下的坐标
+  state.container.addEventListener('mousedown', (e) => {
+    // 判断鼠标按下的坐标是否在图片上
+    if (isInImage(e.clientX, e.clientY)) {
+      startX = e.clientX;
+      startY = e.clientY;
+      isDrawing.value = true;
+    } else {
+      ElMessage.warning('请在图片上绘制');
+    }
+  });
+
+  // 获取鼠标移动的坐标
+  state.container.addEventListener('mousemove', (e) => {
+    if (!isInImage(e.clientX, e.clientY)) {
+      return;
+    } 
+    if (!isDrawing.value) return;
+    // 第一次按下鼠标时, 不需要找到上一个矩形，直接渲染当前矩形
+    if (mousedownCount.value === 0) {
+      renderRect(startX, startY, e.clientX, e.clientY, mousedownCount.value);
+    } else {
+      let reacDom = state.stage.findOne(`#react-0`);
+      reacDom.setAttrs({
+        x: startX,
+        y: startY,
+        width: e.clientX - startX,
+        height: e.clientY - startY,
+      }); 
+      
+    }
+    mousedownCount.value = mousedownCount.value + 1;
+  });
+
+  // 获取鼠标抬起的坐标
+  state.container.addEventListener('mouseup', (e) => {
+    if (isInImage(e.clientX, e.clientY)) {
+      isDrawing.value = false;
+      endX = e.clientX;
+      endY = e.clientY;
+    }
+  });
+}
+const drawCircle = () => {
+  console.log('圆形工具');
+}
+const drawLine = () => {
+  console.log('线段工具');
+}
+const drawLabel = () => {
+  console.log('标签工具');
+}
+const drawCustom = () => {
+  console.log('自定义工具');
 }
 
 onMounted(() => {
-  initImage()
-  // 监听鼠标按下事件，当鼠标a按下时，打印出鼠标的坐标
-  document.addEventListener('mousedown', (e) => {
-    console.log(e.clientX, e.clientY)
-  })
+  // 初始化Konva画布
+  state.container = document.getElementById('containerId');
+  let {x, y} = state.container.getBoundingClientRect();
+  state.stage = new Konva.Stage({
+    x: -x,
+    y: -y,
+    container: state.container,
+    width: state.container.clientWidth,
+    height: state.container.clientHeight,
+  });
+  state.layer = new Konva.Layer();
+  state.stage.add(state.layer);
+  // 初始化图片
+  initImage();
 })
 </script>
 
 <style>
 .wrapper {
-  padding: 20px;
-  width: calc(100% - 40px);
-  height: calc(100% - 40px);
+  padding: 50px;
+  width: calc(100% - 100px);
+  height: calc(100% - 100px);
   display: flex;
   justify-content: space-between;
-  .container {
+  background-color: #7FFFD4;
+  .container-area {
     width: calc(100% - 500px);
     height: 100%;
     background-color: rgb(253, 223, 228);
@@ -114,6 +249,9 @@ onMounted(() => {
         height: 1px;
         background-color: black;
       }
+      .is-active-line::before {
+        background-color: #FFD700;
+      }
       .triangle-tool-icon {
         width: 0;
         height: 0;
@@ -135,6 +273,9 @@ onMounted(() => {
         height: 30px;
         background-color: #7FFFD4; /* 设置背景颜色 */
         clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); /* 使用多边形裁剪 */
+      }
+      .is-active {
+        background-color: #FFD700;
       }
     }
   }
