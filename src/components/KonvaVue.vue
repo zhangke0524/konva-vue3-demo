@@ -4,23 +4,30 @@
     <div class="tool-area">
       <h2>工具栏</h2>
       <p>这里是工具栏</p>
-      <div class="tool-list">
-        <div
-          v-for="(item, index) in toolList"
-          :key="index"
-          :title="item.name"
-          class="tool-icon"
-          @click="handleToolClick(item.id)"
-          :class="{
-            'rect-tool-icon': item.id === 'rect',
-            'circle-tool-icon': item.id === 'circle',
-            'line-tool-icon': item.id === 'line',
-            'label-tool-icon': item.id === 'label',
-            'custom-tool-icon': item.id === 'custom',
-            'is-active': currentTool === item.id,
-            'is-active-line': currentTool === 'line',
-          }"
-        >
+      <div class="right-content">
+        <div class="tool-list">
+          <div
+            v-for="(item, index) in toolList"
+            :key="index"
+            :title="item.name"
+            class="tool-icon"
+            @click="handleToolClick(item.id)"
+            :class="{
+              'rect-tool-icon': item.id === 'rect',
+              'circle-tool-icon': item.id === 'circle',
+              'line-tool-icon': item.id === 'line',
+              'label-tool-icon': item.id === 'label',
+              'custom-tool-icon': item.id === 'custom',
+              'is-active': currentTool === item.id,
+              'is-active-line': currentTool === 'line',
+            }"
+          >
+          </div>
+        </div>
+        <div class="shape-list">
+          <div class="shape-item" v-for="(item,index) in shapeList" :key="item.id">
+            {{ item.type }}-{{ index + 1 }}
+          </div>
         </div>
       </div>
     </div>
@@ -42,8 +49,11 @@ const state = reactive ({
 
 // 是否正在画图
 const isDrawing = ref(false);
+// 鼠标按下的次数
 let mousedownCount = ref(0);
 let currentTool = ref('');
+// 图形列表
+const shapeList = ref([]);
 
 const toolList = [
   { name: '矩形', id: 'rect' },
@@ -114,14 +124,14 @@ const isInImage = (x, y) => {
 
 const renderRect = (startX, startY, endX, endY, id) => {
   const rect = new Konva.Rect({
-    id: `react-${id}`,
+    id: `rect-${id}`,
     x: startX,
     y: startY,
     width: endX - startX,
     height: endY - startY,
     fill: '#67a56359',
     stroke: 'black',
-    strokeWidth: 2
+    strokeWidth: 2,
   });
   state.layer.add(rect);
   console.log('id', id);
@@ -140,39 +150,55 @@ const drawRect = () => {
       startX = e.clientX;
       startY = e.clientY;
       isDrawing.value = true;
+      mousedownCount.value++;
     } else {
       ElMessage.warning('请在图片上绘制');
     }
   });
 
   // 获取鼠标移动的坐标
+  let randomId = '';
   state.container.addEventListener('mousemove', (e) => {
     if (!isInImage(e.clientX, e.clientY)) {
       return;
     } 
     if (!isDrawing.value) return;
-    // 第一次按下鼠标时, 不需要找到上一个矩形，直接渲染当前矩形
-    if (mousedownCount.value === 0) {
-      renderRect(startX, startY, e.clientX, e.clientY, mousedownCount.value);
+    // 第一次按下鼠标时，绘制一个矩形，之后移动鼠标时，改变矩形的宽高
+    if (mousedownCount.value === 1) {
+      randomId = Math.random().toString(36).slice(-8) + Date.now();
+      renderRect(startX, startY, e.clientX, e.clientY, randomId);
     } else {
-      let reacDom = state.stage.findOne(`#react-0`);
-      reacDom.setAttrs({
+      // 获取当前正在绘制的矩形
+      let reacDom = state.stage.findOne(`#rect-${randomId}`);
+      console.log('randomId', randomId);
+      // 改变矩形的宽高
+      reacDom && reacDom.setAttrs({
         x: startX,
         y: startY,
         width: e.clientX - startX,
         height: e.clientY - startY,
-      }); 
-      
+      });
     }
-    mousedownCount.value = mousedownCount.value + 1;
+    mousedownCount.value++;
   });
 
   // 获取鼠标抬起的坐标
   state.container.addEventListener('mouseup', (e) => {
     if (isInImage(e.clientX, e.clientY)) {
-      isDrawing.value = false;
       endX = e.clientX;
       endY = e.clientY;
+      // 将最终绘制的矩形信息保存到数据库
+      shapeList.value.push({
+        type: 'rect',
+        id: `rect-${randomId}`,
+        startX,
+        startY,
+        endX,
+        endY,
+      });
+      // 重置状态
+      isDrawing.value = false;
+      mousedownCount.value = 0;
     }
   });
 }
@@ -214,7 +240,6 @@ onMounted(() => {
   height: calc(100% - 100px);
   display: flex;
   justify-content: space-between;
-  background-color: #7FFFD4;
   .container-area {
     width: calc(100% - 500px);
     height: 100%;
