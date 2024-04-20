@@ -133,6 +133,9 @@ const renderRect = (startX, startY, endX, endY, id) => {
     stroke: 'black',
     strokeWidth: 2,
   });
+  rect.on('mousedown', function() {
+    console.log('点击了矩形');
+  });
   state.layer.add(rect);
   console.log('id', id);
 }
@@ -188,14 +191,16 @@ const drawRect = () => {
       endX = e.clientX;
       endY = e.clientY;
       // 将最终绘制的矩形信息保存到数据库
-      shapeList.value.push({
-        type: 'rect',
-        id: `rect-${randomId}`,
-        startX,
-        startY,
-        endX,
-        endY,
-      });
+      if (isDrawing.value && mousedownCount.value > 1) {
+        shapeList.value.push({
+          type: 'rect',
+          id: `rect-${randomId}`,
+          startX,
+          startY,
+          endX,
+          endY,
+        });
+      }
       // 重置状态
       isDrawing.value = false;
       mousedownCount.value = 0;
