@@ -23,6 +23,16 @@
             }"
           >
           </div>
+          <div class="label-choose">
+            <el-select v-model="labelType" placeholder="请选择标签类型">
+              <el-option
+                v-for="item in labelTypeList"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              ></el-option>
+            </el-select>
+          </div>
         </div>
         <div class="shape-list">
           <div class="shape-item" v-for="(item,index) in shapeList" :key="item.id">
@@ -58,6 +68,8 @@ let currentTool = ref('');
 // 图形列表
 const shapeList = ref([]);
 let isClickInShape = ref(false);
+// 标签类型列表
+let labelType = ref('');
 
 const toolList = [
   { name: '矩形', id: 'rect' },
@@ -65,6 +77,12 @@ const toolList = [
   { name: '线段', id: 'line' },
   { name: '标签', id: 'label'},
   { name: '自定义', id: 'custom' },
+]
+const labelTypeList = [
+  { label: 'car', value: 'car' },
+  { label: 'person', value: 'person' },
+  { label: 'face', value: 'face' },
+  { label: 'fire', value: 'fire' },
 ]
 
 const initImage = () => {
@@ -138,6 +156,28 @@ const renderRect = (startX, startY, endX, endY, id) => {
     stroke: 'black',
     strokeWidth: 2,
   });
+  // 要在绘制rect的时候，也绘制对应的label标签
+  const simpleLabel = new Konva.Label({
+    id: `label-${id}`,
+    x: startX,
+    y: startY-20,
+    height: 20,
+    opacity: 0.75,
+  });
+  simpleLabel.add(
+    new Konva.Tag({
+      fill: 'yellow',
+    })
+  );
+  simpleLabel.add(
+    new Konva.Text({
+      text: labelType.value,
+      fontFamily: 'Arial',
+      fontSize: 12,
+      padding: 5,
+      fill: 'black',
+    })
+  );
   rect.on('mousedown', function() {
     isClickInShape.value = true;
     console.log('点击了矩形');
@@ -148,8 +188,8 @@ const renderRect = (startX, startY, endX, endY, id) => {
       scaleX: 1,
       scaleY: 1,
     });
-    // 点击矩形后，当键盘按下delete键或者backspace时，删除当前矩形
-    window.addEventListener('keydown', function(e) {
+    // 点击矩形后，当键盘按下delete键或者backspace时，删除当前矩形及其对应的label
+    window.addEventListener('keydown', (e) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         delShape({ id: `rect-${id}` });
       }
@@ -167,6 +207,7 @@ const renderRect = (startX, startY, endX, endY, id) => {
     shape.endX = x + rect.width();
     shape.endY = y + rect.height();
   });
+  state.layer.add(simpleLabel);
   state.layer.add(rect);
   console.log('id', id);
 }
@@ -185,6 +226,11 @@ const drawRect = () => {
     }
     // 判断鼠标按下的坐标是否在图片上
     if (isInImage(e.clientX, e.clientY)) {
+      // 如果没有选中的labelType，则不允许绘制矩形
+      if (!labelType.value) {
+        ElMessage.warning('请先选择标签类型');
+        return;
+      }
       startX = e.clientX;
       startY = e.clientY;
       isDrawing.value = true;
@@ -266,8 +312,11 @@ const drawCustom = () => {
 const delShape = (shape) => {
   let index = shapeList.value.findIndex(item => item.id === shape.id);
   shapeList.value.splice(index, 1);
+  // 删除矩形和对应的label
   let shapeDom = state.stage.findOne(`#${shape.id}`);
   shapeDom && shapeDom.destroy();
+  let labelDom = state.stage.findOne(`#label-${shape.id.split('-')[1]}`);
+  labelDom && labelDom.destroy();
 }
 
 onMounted(() => {
@@ -356,6 +405,9 @@ onMounted(() => {
       }
       .is-active {
         background-color: #FFD700;
+      }
+      .label-choose {
+        width: 50%;
       }
     }
     .shape-list {
