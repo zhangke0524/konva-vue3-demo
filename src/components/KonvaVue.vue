@@ -28,6 +28,7 @@
           <div class="shape-item" v-for="(item,index) in shapeList" :key="item.id">
             <span class="shape-name">{{ item.type }}-{{ index + 1 }}</span>
             <span class="shape-position">坐标：{{ `(${item.startX}, ${item.startY})`}}</span>
+            <span @click="delShape(item)"><el-icon><Delete /></el-icon></span>
           </div>
         </div>
       </div>
@@ -36,7 +37,8 @@
 </template>
 
 <script setup>
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElIcon } from 'element-plus';
+import { Delete } from '@element-plus/icons-vue';
 import { onMounted, reactive, ref } from 'vue';
 
 const state = reactive ({
@@ -68,7 +70,8 @@ const toolList = [
 const initImage = () => {
   // 将图片添加到画布中作为背景，图片在保持宽高比的情况下，填充整个画布
   let imageObj = new Image();
-  imageObj.src = './alarm.png';
+  // imageObj.src = './alarm.png';
+  imageObj.src = 'https://n.sinaimg.cn/www/transform/300/w660h440/20240318/3875-37fb8533570d8661d3f547c7e3b0ddde.jpg';
   let imageWidth = state.container.clientWidth;
   let imageHeight = state.container.clientHeight;
   let imageRatio = imageObj.width / imageObj.height;
@@ -144,6 +147,12 @@ const renderRect = (startX, startY, endX, endY, id) => {
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
+    });
+    // 点击矩形后，当键盘按下delete键或者backspace时，删除当前矩形
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        delShape({ id: `rect-${id}` });
+      }
     });
   });
   rect.on('mouseup', function() {
@@ -254,6 +263,13 @@ const drawCustom = () => {
   console.log('自定义工具');
 }
 
+const delShape = (shape) => {
+  let index = shapeList.value.findIndex(item => item.id === shape.id);
+  shapeList.value.splice(index, 1);
+  let shapeDom = state.stage.findOne(`#${shape.id}`);
+  shapeDom && shapeDom.destroy();
+}
+
 onMounted(() => {
   // 初始化Konva画布
   state.container = document.getElementById('containerId');
@@ -340,6 +356,22 @@ onMounted(() => {
       }
       .is-active {
         background-color: #FFD700;
+      }
+    }
+    .shape-list {
+      .shape-item {
+        height: 20px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #ccc;
+        .shape-name {
+          font-size: 16px;
+        }
+        .shape-position {
+          font-size: 14px;
+        }
       }
     }
   }
