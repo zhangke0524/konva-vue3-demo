@@ -195,10 +195,11 @@ const renderRect = (startX, startY, endX, endY, id) => {
   group.on('mouseup', function() {
     isClickInShape.value = false;
   });
-  // 如果进行拖拽了，需要将拖拽后的坐标保存到数据库
   group.on('dragend', function() {
-    // TO DO 不能被拖拽到图片外面
-    let { x, y } = rect.attrs;
+    // 获取拖拽后的group的坐标
+    let x = group.x();
+    let y = group.y();
+    // 将拖拽后的坐标更新到shapeList中
     let shape = shapeList.value.find(item => item.id === `rect-${id}`);
     shape.startX = x;
     shape.startY = y;
@@ -227,8 +228,8 @@ const drawRect = () => {
         ElMessage.warning('请先选择标签类型');
         return;
       }
-      startX = e.clientX;
-      startY = e.clientY;
+      startX = e.clientX - state.container.getBoundingClientRect().x;
+      startY = e.clientY - state.container.getBoundingClientRect().y;
       isDrawing.value = true;
       mousedownCount.value++;
     } else {
