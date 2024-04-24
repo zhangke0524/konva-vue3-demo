@@ -14,12 +14,8 @@
             @click="handleToolClick(item.id)"
             :class="{
               'rect-tool-icon': item.id === 'rect',
-              'circle-tool-icon': item.id === 'circle',
-              'line-tool-icon': item.id === 'line',
-              'label-tool-icon': item.id === 'label',
-              'custom-tool-icon': item.id === 'custom',
+              'custom-tool-icon': item.id === 'polyLine',
               'is-active': currentTool === item.id,
-              'is-active-line': currentTool === 'line',
             }"
           >
           </div>
@@ -36,9 +32,9 @@
         </div>
         <div class="shape-list">
           <div class="shape-item" v-for="(item,index) in shapeList" :key="item.id">
-            <span class="shape-name">{{ item.type }}-{{ index + 1 }}</span>
+            <span class="shape-name">{{ item.type }} - {{ index }}</span>
             <span class="shape-position">坐标：{{ `(${item.startX}, ${item.startY})`}}</span>
-            <span @click="delShape(item)"><el-icon><Delete /></el-icon></span>
+            <span @click="toDelByData(item)"><el-icon><Delete /></el-icon></span>
           </div>
         </div>
       </div>
@@ -69,14 +65,13 @@ let currentTool = ref('');
 const shapeList = ref([]);
 let isClickInShape = ref(false);
 // 标签类型列表
-let labelType = ref('');
+let labelType = ref('car');
+// 选中的group
+let selectedGroup = ref(null);
 
 const toolList = [
   { name: '矩形', id: 'rect' },
-  { name: '圆形', id: 'circle' },
-  { name: '线段', id: 'line' },
-  { name: '标签', id: 'label'},
-  { name: '自定义', id: 'custom' },
+  { name: '多边形', id: 'polyLine' },
 ]
 const labelTypeList = [
   { label: 'car', value: 'car' },
@@ -124,17 +119,8 @@ const handleToolClick = (toolId) => {
     case 'rect':
       drawRect();
       break;
-    case 'circle':
-      drawCircle();
-      break;
-    case 'line':
-      drawLine();
-      break;
-    case 'label':
-      drawLabel();
-      break;
-    case 'custom':
-      drawCustom();
+    case 'polyLine':
+      drawPolyLine();
       break;
     default:
       break;
@@ -146,6 +132,11 @@ const isInImage = (x, y) => {
 }
 
 const renderRect = (startX, startY, endX, endY, id) => {
+  // 创建一个group，将矩形和label放在一起
+  const group = new Konva.Group({
+    id: `group-${id}`,
+  });
+  // 创建一个矩形
   const rect = new Konva.Rect({
     id: `rect-${id}`,
     x: startX,
@@ -156,7 +147,7 @@ const renderRect = (startX, startY, endX, endY, id) => {
     stroke: 'black',
     strokeWidth: 2,
   });
-  // 要在绘制rect的时候，也绘制对应的label标签
+  // 绘制矩形时，也绘制对应的label标签
   const simpleLabel = new Konva.Label({
     id: `label-${id}`,
     x: startX,
@@ -178,28 +169,35 @@ const renderRect = (startX, startY, endX, endY, id) => {
       fill: 'black',
     })
   );
-  rect.on('mousedown', function() {
+  // 将矩形和label放在一起
+  group.add(rect);
+  group.add(simpleLabel);
+  // 鼠标按下
+  group.on('mousedown', function() {
     isClickInShape.value = true;
-    console.log('点击了矩形');
-    // 添加konva的transform属性，可以对图形进行缩放、旋转、平移等操作
-    rect.setAttrs({
+    // 将矩形和label作为一个整体进行拖拽
+    group.setAttrs({
       draggable: true,
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
     });
-    // 点击矩形后，当键盘按下delete键或者backspace时，删除当前矩形及其对应的label
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        delShape({ id: `rect-${id}` });
-      }
-    });
   });
-  rect.on('mouseup', function() {
+  group.on('click', function() {
+    selectedGroup.value = group;
+  });
+  group.on('mouseover', function() {
+    document.body.style.cursor = 'pointer';
+  });
+  group.on('mouseout', function() {
+    document.body.style.cursor = 'default';
+  })
+  group.on('mouseup', function() {
     isClickInShape.value = false;
   });
   // 如果进行拖拽了，需要将拖拽后的坐标保存到数据库
-  rect.on('dragend', function() {
+  group.on('dragend', function() {
+    // TO DO 不能被拖拽到图片外面
     let { x, y } = rect.attrs;
     let shape = shapeList.value.find(item => item.id === `rect-${id}`);
     shape.startX = x;
@@ -207,9 +205,7 @@ const renderRect = (startX, startY, endX, endY, id) => {
     shape.endX = x + rect.width();
     shape.endY = y + rect.height();
   });
-  state.layer.add(simpleLabel);
-  state.layer.add(rect);
-  console.log('id', id);
+  state.layer.add(group);
 }
 
 const drawRect = () => {
@@ -258,7 +254,6 @@ const drawRect = () => {
     } else {
       // 获取当前正在绘制的矩形
       let reacDom = state.stage.findOne(`#rect-${randomId}`);
-      console.log('randomId', randomId);
       // 改变矩形的宽高
       reacDom && reacDom.setAttrs({
         x: startX,
@@ -296,27 +291,31 @@ const drawRect = () => {
     }
   });
 }
-const drawCircle = () => {
-  console.log('圆形工具');
-}
-const drawLine = () => {
-  console.log('线段工具');
-}
-const drawLabel = () => {
-  console.log('标签工具');
-}
-const drawCustom = () => {
-  console.log('自定义工具');
+const drawPolyLine = () => {
+  console.log('多边形');
 }
 
-const delShape = (shape) => {
-  let index = shapeList.value.findIndex(item => item.id === shape.id);
+// 点击右侧的删除按钮，删除对应的shape，并且删除对应的group
+const toDelByData = (item) => {
+  // 通过group找到右侧的shapeList中对应的item，然后删除
+  let id = item.id;
+  let index = shapeList.value.findIndex(item => item.id === id);
   shapeList.value.splice(index, 1);
-  // 删除矩形和对应的label
-  let shapeDom = state.stage.findOne(`#${shape.id}`);
-  shapeDom && shapeDom.destroy();
-  let labelDom = state.stage.findOne(`#label-${shape.id.split('-')[1]}`);
-  labelDom && labelDom.destroy();
+  // 根据id找到画布中对应的group，然后删除
+  let group = state.stage.findOne(`#group-${id.split('-')[1]}`);
+  // 删除group
+  group.destroy();
+}
+
+// 点击键盘的delete键或者backspace键，删除对应的group
+const toDelByCanvas = (group) => {
+  // 通过group找到右侧的shapeList中对应的item，然后删除
+  let id = group.id();
+  let rectId = `rect-${id.split('-')[1]}`;
+  let index = shapeList.value.findIndex(item => item.id === rectId);
+  shapeList.value.splice(index, 1);
+  // 删除group
+  group.destroy();
 }
 
 onMounted(() => {
@@ -332,6 +331,17 @@ onMounted(() => {
   });
   state.layer = new Konva.Layer();
   state.stage.add(state.layer);
+  // 点击group后，当键盘按下delete键或者backspace时，删除当前矩形及其对应的label所在的group
+  window.addEventListener('keydown', (e) => {
+    console.log('e', e);
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedGroup.value) {
+        toDelByCanvas(selectedGroup.value);
+        state.layer.draw();
+        selectedGroup.value = null;
+      }
+    }
+  });
   // 初始化图片
   initImage();
 })
@@ -365,19 +375,6 @@ onMounted(() => {
         height: 30px;
         border: 1px solid black;
       }
-      .circle-tool-icon {
-        width: 30px;
-        height: 30px;
-        border: 1px solid black;
-        border-radius: 50%;
-      }
-      .line-tool-icon::before {
-        content: '';
-        display: block;
-        width: 30px;
-        height: 1px;
-        background-color: black;
-      }
       .is-active-line::before {
         background-color: #FFD700;
       }
@@ -387,15 +384,6 @@ onMounted(() => {
         border-left: 15px solid transparent;
         border-right: 15px solid transparent;
         border-bottom: 30px solid black;
-      }
-      .label-tool-icon {
-        display: inline-block;
-        padding: 5px 10px;
-        border: 1px solid black;
-        border-radius: 10px;
-        font-family: Arial, sans-serif;
-        font-size: 14px;
-        color: #333;
       }
       .custom-tool-icon {
         width: 30px;
