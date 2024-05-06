@@ -3,6 +3,6 @@
 </template>
 
 <script setup>
-import KonvaVue from './components/konvaVue.vue';
+import KonvaVue from './components/KonvaVue.vue';
 </script>
 
