@@ -151,7 +151,7 @@ const renderRect = (startX, startY, endX, endY, id) => {
   const simpleLabel = new Konva.Label({
     id: `label-${id}`,
     x: startX,
-    y: startY-20,
+    y: startY,
     height: 20,
     opacity: 0.75,
   });
@@ -322,10 +322,7 @@ const toDelByCanvas = (group) => {
 onMounted(() => {
   // 初始化Konva画布
   state.container = document.getElementById('containerId');
-  let {x, y} = state.container.getBoundingClientRect();
   state.stage = new Konva.Stage({
-    x: -x,
-    y: -y,
     container: state.container,
     width: state.container.clientWidth,
     height: state.container.clientHeight,
