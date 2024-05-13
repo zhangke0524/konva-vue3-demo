@@ -1,4 +1,5 @@
 import Konva from 'konva';
+import bus from './bus.js';
 
 export default class ImgAnnotate {
   stage = null;
@@ -101,7 +102,8 @@ export default class ImgAnnotate {
     this.isDrawing = false;
     this.currentRect = null;
     this.konvaData = this.getGroupData();
-    console.log('konvaData:', this.konvaData);
+    // 将绘制后的数据传送到konvaVueNew中进行保存
+    bus.emit('canvasData', this.konvaData);
   }
 
   // 获取当前画布上的数据

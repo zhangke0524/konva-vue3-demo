@@ -5,8 +5,9 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import ImgAnnotate from '../utils/konva';
+import bus from '../utils/bus'
 
 // 功能说明
 // 1、通过Konva.Image创建图片，然后将图片添加到舞台
@@ -19,14 +20,19 @@ import ImgAnnotate from '../utils/konva';
 // 代码实现
 const annotate = ref(null);
 
+const canvasData = ref(null);
+
 onMounted(() => {
   let width = window.innerWidth;
   let height = window.innerHeight;
   let el = document.getElementById('container');
-  // let imgSrc = 'https://konvajs.org/assets/lion.png';
-  // let imgSrc = 'https://upload-images.jianshu.io/upload_images/5809200-03bbbd715c24750e.jpg?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240'
   let imgSrc = 'https://n.sinaimg.cn/www/transform/300/w660h440/20240318/3875-37fb8533570d8661d3f547c7e3b0ddde.jpg'
   annotate.value = new ImgAnnotate({ el, width, height, imgSrc });
+  // 监听canvasData事件，获取绘制的矩形坐标信息
+  bus.on('canvasData', (data) => {
+    canvasData.value = data;
+    console.log('canvasData', canvasData.value);
+  });
 });
 
 </script>
