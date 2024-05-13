@@ -23,8 +23,9 @@ onMounted(() => {
   let width = window.innerWidth;
   let height = window.innerHeight;
   let el = document.getElementById('container');
-  let imgSrc = 'https://konvajs.org/assets/lion.png';
+  // let imgSrc = 'https://konvajs.org/assets/lion.png';
   // let imgSrc = 'https://upload-images.jianshu.io/upload_images/5809200-03bbbd715c24750e.jpg?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240'
+  let imgSrc = 'https://n.sinaimg.cn/www/transform/300/w660h440/20240318/3875-37fb8533570d8661d3f547c7e3b0ddde.jpg'
   annotate.value = new ImgAnnotate({ el, width, height, imgSrc });
 });
 
