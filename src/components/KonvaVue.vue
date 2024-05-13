@@ -83,8 +83,8 @@ const labelTypeList = [
 const initImage = () => {
   // 将图片添加到画布中作为背景，图片在保持宽高比的情况下，填充整个画布
   let imageObj = new Image();
-  // imageObj.src = './alarm.png';
-  imageObj.src = 'https://n.sinaimg.cn/www/transform/300/w660h440/20240318/3875-37fb8533570d8661d3f547c7e3b0ddde.jpg';
+  imageObj.src = './alarm.png';
+  // imageObj.src = 'https://n.sinaimg.cn/www/transform/300/w660h440/20240318/3875-37fb8533570d8661d3f547c7e3b0ddde.jpg';
   let imageWidth = state.container.clientWidth;
   let imageHeight = state.container.clientHeight;
   let imageRatio = imageObj.width / imageObj.height;
