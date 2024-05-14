@@ -12,6 +12,8 @@ export default class ImgAnnotate {
   currentPencil = 'rect'
   // 当前绘制的矩形
   currentRect = null;
+  // 当前矩形所在的group
+  currentGroup = null;
   // 是否正在绘制
   isDrawing = false;
   // konva数据(主要用于记录绘制的矩形数据)
@@ -83,7 +85,27 @@ export default class ImgAnnotate {
       stroke: 'red',
       strokeWidth: 2
     });
-    this.layer.add(this.currentRect);
+    // 除了矩形外，还需要给这个矩形添加一个label标签
+    const label = new Konva.Label({
+      x: pos.x,
+      y: pos.y,
+      opacity: 0.75
+    });
+    label.add(new Konva.Tag({
+      fill: 'yellow'
+    }));
+    label.add(new Konva.Text({
+      text: 'Hello',
+      fontFamily: 'Calibri',
+      fontSize: 18,
+      padding: 5,
+      fill: 'black'
+    }));
+    // 将label和矩形添加到一个group中
+    this.currentGroup = new Konva.Group();
+    this.currentGroup.add(this.currentRect);
+    this.currentGroup.add(label);
+    this.layer.add(this.currentGroup);
   }
 
   // 更新矩形大小
@@ -100,23 +122,23 @@ export default class ImgAnnotate {
   // 结束绘制
   endDrawRect(e) {
     this.isDrawing = false;
-    this.currentRect = null;
-    this.konvaData = this.getGroupData();
     // 将绘制后的数据传送到konvaVueNew中进行保存
+    this.konvaData = this.getGroupData();
     bus.emit('canvasData', this.konvaData);
+    this.currentRect = null;
+    this.currentGroup = null;
   }
 
   // 获取当前画布上的数据
   getGroupData() {
-    const group = new Konva.Group();
-    this.layer.children.forEach((item) => {
-      if (item instanceof Konva.Rect) {
-        group.add(item.clone());
+    const data = [];
+    this.layer.find('Group').forEach((group) => {
+      const rect = group.findOne('Rect');
+      if (rect) {
+        data.push(group)
       }
     });
-    return group.getChildren().map((item) => {
-      return item;
-    });
+    return data;
   }
 
 }
