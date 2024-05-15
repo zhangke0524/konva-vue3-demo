@@ -56,6 +56,15 @@ export default class ImgAnnotate {
     this.imageObj.src = imgSrc;
   }
 
+  // 判断当前位置是否在图片上
+  getIsPosInImage() {
+    const pos = this.stage.getPointerPosition();
+    if (pos.x < 0 || pos.x > this.imageObj.width || pos.y < 0 || pos.y > this.imageObj.height) {
+      return false;
+    }
+    return true;
+  }
+
   /*
   * bindEvent 为stage绑定事件
   */
@@ -64,18 +73,26 @@ export default class ImgAnnotate {
     this.stage.on('mousedown', (e) => {
       // 如果点击在group上，则不绘制矩形
       if (this.isClickInGroup) return;
+      // 判断鼠标按下所在的位置是否在图片上，如果不在图片上则不绘制
+      let isPosInImage = this.getIsPosInImage();
+      if (!isPosInImage) return;
       if (this.currentPencil === 'rect' && !this.isDrawing) {
         this.drawRect(e);
+        this.selectedGroup = null;
       }
     });
     // 鼠标移动时更新矩形大小
     this.stage.on('mousemove', (e) => {
+      let isPosInImage = this.getIsPosInImage();
+      if (!isPosInImage) return;
       if (this.currentPencil === 'rect') {
         this.updateRect(e);
       }
     });
     // 鼠标松开时结束绘制
     this.stage.on('mouseup', (e) => {
+      let isPosInImage = this.getIsPosInImage();
+      if (!isPosInImage) return;
       if (this.currentPencil === 'rect') {
         this.endDrawRect(e);
       }
@@ -173,13 +190,13 @@ export default class ImgAnnotate {
     group.on('click', function() {
       this.selectedGroup = group;
       // 选中当前group时，将该group的矩形高亮显示, 其他group的矩形恢复原状
-      layer.find('Group').forEach((g) => {
-        const r = g.findOne('Rect');
-        r && r.stroke('red');
-      });
-      const rect = group.findOne('Rect');
-      rect.stroke('blue');
-      layer.batchDraw();
+      // layer.find('Group').forEach((g) => {
+      //   const r = g.findOne('Rect');
+      //   r && r.stroke('red');
+      // });
+      // const rect = group.findOne('Rect');
+      // rect.stroke('blue');
+      // layer.batchDraw();
       // 如果此时用户按下了delete键或者backspace，则删除当前选中的group
       // 需要使用非箭头函数，否则this指向会有问题
       document.onkeydown = function(e) {
