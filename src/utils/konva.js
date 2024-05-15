@@ -14,8 +14,12 @@ export default class ImgAnnotate {
   currentRect = null;
   // 当前矩形所在的group
   currentGroup = null;
+  // 当前选中的group
+  selectedGroup = null;
   // 是否正在绘制
   isDrawing = false;
+  // 是否点击在group上
+  isClickInGroup = false;
   // konva数据(主要用于记录绘制的矩形数据)
   konvaData = [];
 
@@ -52,10 +56,15 @@ export default class ImgAnnotate {
     this.imageObj.src = imgSrc;
   }
 
+  /*
+  * bindEvent 为stage绑定事件
+  */
   bindEvent() {
     // 鼠标按下就开始绘制矩形
     this.stage.on('mousedown', (e) => {
-      if (this.currentPencil === 'rect') {
+      // 如果点击在group上，则不绘制矩形
+      if (this.isClickInGroup) return;
+      if (this.currentPencil === 'rect' && !this.isDrawing) {
         this.drawRect(e);
       }
     });
@@ -105,6 +114,8 @@ export default class ImgAnnotate {
     this.currentGroup = new Konva.Group();
     this.currentGroup.add(this.currentRect);
     this.currentGroup.add(label);
+    // 为group绑定事件，用于通过鼠标点击group来选中当前的矩形，方便后续的删除操作
+    this.bindEventForGroup(this.currentGroup);
     this.layer.add(this.currentGroup);
   }
 
@@ -139,6 +150,50 @@ export default class ImgAnnotate {
       }
     });
     return data;
+  }
+
+  /*
+  * bindEventForGroup 为group绑定事件
+  */
+  bindEventForGroup(group) {
+    const layer = this.layer;
+    const getGroupData = this.getGroupData.bind(this);
+    group.on('mousedown', () => {
+      this.isClickInGroup = true;
+    });
+    group.on('mouseup', () => {
+      this.isClickInGroup = false;
+    });
+    group.on('mouseover', function() {
+      document.body.style.cursor = 'pointer';
+    });
+    group.on('mouseout', function() {
+      document.body.style.cursor = 'default';
+    });
+    group.on('click', function() {
+      this.selectedGroup = group;
+      // 选中当前group时，将该group的矩形高亮显示, 其他group的矩形恢复原状
+      layer.find('Group').forEach((g) => {
+        const r = g.findOne('Rect');
+        r && r.stroke('red');
+      });
+      const rect = group.findOne('Rect');
+      rect.stroke('blue');
+      layer.batchDraw();
+      // 如果此时用户按下了delete键或者backspace，则删除当前选中的group
+      // 需要使用非箭头函数，否则this指向会有问题
+      document.onkeydown = function(e) {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          group.destroy();
+          layer.batchDraw();
+          // 删除后需要将当前选中的group置为null
+          this.selectedGroup = null;
+          // 删除后需要将当前的数据更新
+          this.konvaData = getGroupData();
+          bus.emit('canvasData', this.konvaData);
+        }
+      };
+    })
   }
 
 }
