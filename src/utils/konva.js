@@ -22,14 +22,17 @@ export default class ImgAnnotate {
   isClickInGroup = false;
   // konva数据(主要用于记录绘制的矩形数据)
   konvaData = [];
+  // 画布上的数据（目前用来进行数据回显）
+  annotateData = []
 
-  constructor({ width, height, el, imgSrc }) {
+  constructor({ width, height, el, imgSrc, initData }) {
     this.stage = new Konva.Stage({
       container: el,
       width: width,
       height: height
     });
 
+    this.annotateData = initData;
     this.layer = new Konva.Layer();
     this.stage.add(this.layer);
     this.initImage(this.layer, imgSrc);
@@ -52,8 +55,20 @@ export default class ImgAnnotate {
       // this.konvaImage.drawHitFromCache()
       layer.add(this.konvaImage);
       layer.batchDraw();
+      // 绘制已有的矩形
+      this.init();
     };
     this.imageObj.src = imgSrc;
+  }
+
+  // 初始化已有的矩形(即数据回显)
+  init() {
+    if (this.annotateData.length > 0) {
+      this.annotateData.forEach((posData) => {
+        this.drawRect(null, posData);
+      });
+      this.layer.batchDraw();
+    }
   }
 
   // 判断当前位置是否在图片上
@@ -100,14 +115,26 @@ export default class ImgAnnotate {
   }
 
   // 绘制矩形
-  drawRect(e) {
-    this.isDrawing = true;
-    const pos = this.stage.getPointerPosition();
+  drawRect(e, posData) {
+    let pos = null;
+    let width = 0;
+    let height = 0;
+    if (posData) {
+      // 如果传入了posData，则表示是数据回显，需要将posData中的数据解构出来
+      pos = posData;
+      width = posData.width;
+      height = posData.height;
+      this.isDrawing = false;
+    } else {
+      // 如果没有传入posData，则表示是用户手动绘制，需要获取当前鼠标的位置
+      pos = this.stage.getPointerPosition();
+      this.isDrawing = true;
+    }
     this.currentRect = new Konva.Rect({
       x: pos.x,
       y: pos.y,
-      width: 0,
-      height: 0,
+      width: width,
+      height: height,
       stroke: 'red',
       strokeWidth: 2
     });
